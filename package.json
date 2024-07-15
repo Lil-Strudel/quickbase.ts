@@ -1,0 +1,53 @@
+{
+  "name": "quickbase.ts",
+  "version": "1.0.0",
+  "description": "A small, lightweight, strongly typed wrapper around axios built for quickbase.",
+  "scripts": {
+    "build": "tsup",
+    "format": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lil-Strudel/quickbase.ts.git"
+  },
+  "keywords": [
+    "quickbase"
+  ],
+  "author": "Lil-Strudel",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Lil-Strudel/quickbase.ts/issues"
+  },
+  "homepage": "https://github.com/Lil-Strudel/quickbase.ts#readme",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.7.0",
+    "eslint": "^9.7.0",
+    "globals": "^15.8.0",
+    "prettier": "^3.3.3",
+    "tsup": "^8.1.0",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^7.16.1"
+  },
+  "dependencies": {
+    "axios": "^1.7.2"
+  },
+  "overrides": {
+    "eslint": "^9.7.0"
+  }
+}
