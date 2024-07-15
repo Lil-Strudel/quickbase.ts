@@ -4,7 +4,8 @@
   "description": "A small, lightweight, strongly typed wrapper around axios built for quickbase.",
   "scripts": {
     "build": "tsup",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "vitest"
   },
   "repository": {
     "type": "git",
@@ -42,7 +43,8 @@
     "prettier": "^3.3.3",
     "tsup": "^8.1.0",
     "typescript": "^5.5.3",
-    "typescript-eslint": "^7.16.1"
+    "typescript-eslint": "^7.16.1",
+    "vitest": "^2.0.3"
   },
   "dependencies": {
     "axios": "^1.7.2"
