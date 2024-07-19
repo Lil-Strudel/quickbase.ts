@@ -143,6 +143,7 @@ export class Table<TableDef extends TableDefinition> {
         select: fieldIds,
         sortBy: [{ fieldId: this.table.keyField.id, order: "DESC" }],
         options: { top: data.limit, skip: (data.page - 1) * data.limit },
+        ...(data.query ? { where: this.createWhere(data.query) } : {}),
       },
     );
 

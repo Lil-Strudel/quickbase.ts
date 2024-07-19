@@ -1,6 +1,6 @@
 {
   "name": "quickbase.ts",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A small, lightweight, strongly typed wrapper around axios built for quickbase.",
   "scripts": {
     "build": "tsup",
