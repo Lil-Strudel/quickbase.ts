@@ -11,22 +11,24 @@ import {
   TableDefinition,
 } from "./types";
 
-interface GetManyRequest<K, T> {
+interface GetManyRequest<T> {
   page: number;
   limit: number;
-  query?: QueryBuilder<K, T>;
+  query?: QueryBuilder<T>;
 }
 
-type FieldQuery<K, T> = {
-  field: K;
-  op: QuickbaseOperators;
-  value: T;
-};
+type FieldQuery<T> = {
+  [K in keyof T]: {
+    field: K;
+    op: QuickbaseOperators;
+    value: T[K];
+  };
+}[keyof T];
 
-type QueryBuilder<K, T> =
-  | { AND: QueryBuilder<K, T>[] }
-  | { OR: QueryBuilder<K, T>[] }
-  | FieldQuery<K, T>;
+type QueryBuilder<T> =
+  | { AND: QueryBuilder<T>[] }
+  | { OR: QueryBuilder<T>[] }
+  | FieldQuery<T>;
 
 export class Table<TableDef extends TableDefinition> {
   private fieldIds: number[];
@@ -47,9 +49,7 @@ export class Table<TableDef extends TableDefinition> {
     }, {} as FieldKeyMap);
   }
 
-  createWhere<T extends keyof DocumentFromTable<TableDef>>(
-    query: QueryBuilder<T, DocumentFromTable<TableDef>[T]>,
-  ): string {
+  createWhere(query: QueryBuilder<DocumentFromTable<TableDef>>): string {
     if ("AND" in query) {
       const where = query.AND.map((subQuery) => this.createWhere(subQuery));
       return "(" + where.join("AND") + ")";
@@ -105,9 +105,7 @@ export class Table<TableDef extends TableDefinition> {
     return data;
   }
 
-  async getOne<T extends keyof DocumentFromTable<TableDef>>(
-    query: QueryBuilder<T, DocumentFromTable<TableDef>[T]>,
-  ) {
+  async getOne(query: QueryBuilder<DocumentFromTable<TableDef>>) {
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
       "/records/query",
       {
@@ -135,9 +133,7 @@ export class Table<TableDef extends TableDefinition> {
     return res.data.data?.[0] ? this.extractFields(res.data.data[0]) : null;
   }
 
-  async getMany<T extends keyof DocumentFromTable<TableDef>>(
-    data: GetManyRequest<T, DocumentFromTable<TableDef>[T]>,
-  ) {
+  async getMany(data: GetManyRequest<DocumentFromTable<TableDef>>) {
     const fieldIds = this.table.fields.map((field) => field.id);
 
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
