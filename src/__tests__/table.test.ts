@@ -46,13 +46,30 @@ describe("Table Class", async () => {
   });
 
   it("should get one by id", async () => {
-    const doc = await table.getOneById(testRecordId);
+    const doc = await table.getOneById({
+      id: testRecordId,
+    });
+
     expect(doc).toBeDefined();
   });
 
   it("should get many", async () => {
-    const docs = await table.getMany({ page: 1, limit: 10 });
+    const docs = await table.getMany({
+      page: 1,
+      limit: 10,
+    });
     expect(docs).toBeDefined();
+  });
+
+  it("should only include the fields for name and email", async () => {
+    const docs = await table.getMany({
+      select: ["name", "email"],
+      page: 1,
+      limit: 10,
+    });
+    expect(docs[0]).toHaveProperty("name");
+    expect(docs[0]).not.toHaveProperty("phone");
+    expect(docs[0]).toHaveProperty("email");
   });
 
   it("should update one", async () => {
@@ -62,9 +79,11 @@ describe("Table Class", async () => {
 
   it("should get one", async () => {
     const res = await table.getOne({
-      field: "name",
-      op: "EX",
-      value: "Test Name",
+      query: {
+        field: "name",
+        op: "EX",
+        value: "Test Name",
+      },
     });
     expect(res).toBeDefined();
   });
@@ -102,4 +121,13 @@ describe("Table Class", async () => {
       });
     }).toThrowError("Field not found in table definition");
   });
+
+  it("should limit the type to the parameters passed in", async () => {
+    type Test<T> 
+
+  });
 });
+export type QBFile = NonNullable<
+  Awaited<ReturnType<typeof grandeurAgain.tables.file.getOne>>
+>;
+
