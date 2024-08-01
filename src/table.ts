@@ -10,10 +10,21 @@ import {
   QuickbaseRecord,
   TableDefinition,
 } from "./types";
-
+interface GetOneByIdRequest<
+  T extends TableDefinition,
+  K extends DocumentFromTable<T>,
+> {
+  id: FieldTypeMapping[T["keyField"]["type"]];
+  select?: SelectBuilder<K>;
+}
+interface GetOneRequest<T> {
+  select?: SelectBuilder<T>;
+  query: QueryBuilder<T>;
+}
 interface GetManyRequest<T> {
   page: number;
   limit: number;
+  select?: SelectBuilder<T>;
   query?: QueryBuilder<T>;
 }
 
@@ -29,6 +40,8 @@ type QueryBuilder<T> =
   | { AND: QueryBuilder<T>[] }
   | { OR: QueryBuilder<T>[] }
   | FieldQuery<T>;
+
+type SelectBuilder<T> = (keyof T)[];
 
 export class Table<TableDef extends TableDefinition> {
   private fieldIds: number[];
@@ -68,19 +81,42 @@ export class Table<TableDef extends TableDefinition> {
     return `{'${field.id}'.${query.op}.'${query.value}'}`;
   }
 
-  private extractFields(record: QuickbaseRecord<TableDef>) {
-    type Document = DocumentFromTable<TableDef>;
+  private getSelectedFieldIds<K extends (keyof DocumentFromTable<TableDef>)[]>(
+    selectedKeys: K | undefined,
+  ) {
+    return selectedKeys
+      ? selectedKeys.map((field) => {
+          const fieldDef = this.table.fields.find((f) => f.key === field);
+          if (!fieldDef) throw new Error(`Field not found in table definition`);
+          return fieldDef.id;
+        })
+      : this.table.fields.map((field) => field.id);
+  }
+
+  private extractFields<
+    K extends undefined | (keyof DocumentFromTable<TableDef>)[],
+  >(record: QuickbaseRecord<TableDef>, selectedKeys: K = undefined as K) {
+    const fields = selectedKeys
+      ? (selectedKeys.map((key) => {
+          const field = this.fieldKeyMap[key];
+          return field;
+        }) as Field[])
+      : (this.table.fields as Field[]);
+    type Document = Pick<
+      DocumentFromTable<TableDef>,
+      K extends (keyof DocumentFromTable<TableDef>)[]
+        ? K[number]
+        : keyof DocumentFromTable<TableDef>
+    >;
     const newItem = {} as Document;
 
-    for (let i = 0; i < this.table.fields.length; i++) {
-      const fieldDef = this.table.fields[i];
-      const qbRecordKey = fieldDef.id as keyof typeof record;
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i];
+      const key = field.key as keyof Document;
+      const qbRecordKey = field.id as keyof typeof record;
       const qbField = record[qbRecordKey] as QuickbaseField<
         Document[keyof Document]
       >;
-
-      const key = this.table.fields[i].key as keyof Document;
-
       newItem[key] = qbField.value;
     }
 
@@ -105,49 +141,68 @@ export class Table<TableDef extends TableDefinition> {
     return data;
   }
 
-  async getOne(query: QueryBuilder<DocumentFromTable<TableDef>>) {
+  async getOne<
+    T extends GetOneRequest<DocumentFromTable<TableDef>>,
+    K extends T["select"],
+  >(data: T) {
+    const selectedFieldIds = this.getSelectedFieldIds(data.select);
+
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
       "/records/query",
       {
         from: this.table.id,
-        select: this.fieldIds,
+        select: selectedFieldIds,
         options: { top: 1, skip: 0 },
-        where: this.createWhere(query),
+        where: this.createWhere(data.query),
       },
     );
 
-    return res.data.data?.[0] ? this.extractFields(res.data.data[0]) : null;
+    return res.data.data?.[0]
+      ? this.extractFields(res.data.data[0], data.select as K)
+      : null;
   }
 
-  async getOneById(id: FieldTypeMapping[TableDef["keyField"]["type"]]) {
-    const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
-      "/records/query",
-      {
-        from: this.table.id,
-        select: this.fieldIds,
-        options: { top: 1, skip: 0 },
-        where: `{'${this.table.keyField.id}'.EX.'${id}'}`,
-      },
-    );
-
-    return res.data.data?.[0] ? this.extractFields(res.data.data[0]) : null;
-  }
-
-  async getMany(data: GetManyRequest<DocumentFromTable<TableDef>>) {
-    const fieldIds = this.table.fields.map((field) => field.id);
+  async getOneById<
+    T extends GetOneByIdRequest<TableDef, DocumentFromTable<TableDef>>,
+    K extends T["select"],
+  >(data: T) {
+    const fieldIds = this.getSelectedFieldIds(data.select);
 
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
       "/records/query",
       {
         from: this.table.id,
         select: fieldIds,
+        options: { top: 1, skip: 0 },
+        where: `{'${this.table.keyField.id}'.EX.'${data.id}'}`,
+      },
+    );
+
+    return res.data.data?.[0]
+      ? this.extractFields(res.data.data[0], data.select as K)
+      : null;
+  }
+
+  async getMany<
+    T extends GetManyRequest<DocumentFromTable<TableDef>>,
+    K extends T["select"],
+  >(data: T) {
+    const selectedFieldIds = this.getSelectedFieldIds(data.select);
+
+    const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
+      "/records/query",
+      {
+        from: this.table.id,
+        select: selectedFieldIds,
         sortBy: [{ fieldId: this.table.keyField.id, order: "DESC" }],
         options: { top: data.limit, skip: (data.page - 1) * data.limit },
         ...(data.query ? { where: this.createWhere(data.query) } : {}),
       },
     );
 
-    return res.data.data.map((qbRecord) => this.extractFields(qbRecord));
+    return res.data.data.map((qbRecord) =>
+      this.extractFields(qbRecord, data.select as K),
+    );
   }
 
   async createOne(body: DocumentFromTable<TableDef>) {
