@@ -8,6 +8,7 @@ import {
   QuickbaseOperators,
   QuickbaseQueryResponse,
   QuickbaseRecord,
+  SelectForTable,
   TableDefinition,
 } from "./types";
 
@@ -68,20 +69,49 @@ export class Table<TableDef extends TableDefinition> {
     return `{'${field.id}'.${query.op}.'${query.value}'}`;
   }
 
-  private extractFields(record: QuickbaseRecord<TableDef>) {
-    type Document = DocumentFromTable<TableDef>;
+  private createSelect(select?: SelectForTable<TableDef>) {
+    if (!select) return this.fieldIds;
+
+    type FieldKeyMap = typeof this.fieldKeyMap;
+    return select.map((fieldKey) => {
+      const field = this.fieldKeyMap[fieldKey as keyof FieldKeyMap] as Field;
+      if (!field) {
+        throw new Error(`Tried to select field that doesnt exist: ${fieldKey}`);
+      }
+
+      return field.id;
+    });
+  }
+
+  private extractFields<Select extends SelectForTable<TableDef>>(
+    record: QuickbaseRecord<TableDef>,
+    select?: Select,
+  ) {
+    type Document = Pick<DocumentFromTable<TableDef>, Select[number]>;
     const newItem = {} as Document;
 
-    for (let i = 0; i < this.table.fields.length; i++) {
-      const fieldDef = this.table.fields[i];
-      const qbRecordKey = fieldDef.id as keyof typeof record;
-      const qbField = record[qbRecordKey] as QuickbaseField<
-        Document[keyof Document]
-      >;
+    type FieldKeyMap = typeof this.fieldKeyMap;
+    if (select) {
+      select.forEach((fieldKey) => {
+        const qbRecordKey = (
+          this.fieldKeyMap[fieldKey as keyof FieldKeyMap] as Field
+        ).id as keyof typeof record;
+        const qbField = record[qbRecordKey] as QuickbaseField<
+          Document[keyof Document]
+        >;
 
-      const key = this.table.fields[i].key as keyof Document;
+        newItem[fieldKey] = qbField.value;
+      });
+    } else {
+      this.table.fields.forEach((fieldDef) => {
+        const qbRecordKey = fieldDef.id as keyof typeof record;
+        const qbField = record[qbRecordKey] as QuickbaseField<
+          Document[keyof Document]
+        >;
 
-      newItem[key] = qbField.value;
+        const key = fieldDef.key as keyof Document;
+        newItem[key] = qbField.value;
+      });
     }
 
     return newItem;
@@ -105,49 +135,67 @@ export class Table<TableDef extends TableDefinition> {
     return data;
   }
 
-  async getOne(query: QueryBuilder<DocumentFromTable<TableDef>>) {
+  async getOne<const Select extends SelectForTable<TableDef>>(
+    query: QueryBuilder<DocumentFromTable<TableDef>>,
+    select?: Select,
+  ) {
+    const qbSelect = this.createSelect(select);
+    const qbWhere = this.createWhere(query);
+
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
       "/records/query",
       {
         from: this.table.id,
-        select: this.fieldIds,
+        select: qbSelect,
         options: { top: 1, skip: 0 },
-        where: this.createWhere(query),
+        where: qbWhere,
       },
     );
 
-    return res.data.data?.[0] ? this.extractFields(res.data.data[0]) : null;
+    return res.data.data?.[0]
+      ? this.extractFields<Select>(res.data.data[0], select)
+      : null;
   }
 
-  async getOneById(id: FieldTypeMapping[TableDef["keyField"]["type"]]) {
+  async getOneById<const Select extends SelectForTable<TableDef>>(
+    id: FieldTypeMapping[TableDef["keyField"]["type"]],
+    select?: Select,
+  ) {
+    const qbSelect = this.createSelect(select);
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
       "/records/query",
       {
         from: this.table.id,
-        select: this.fieldIds,
+        select: qbSelect,
         options: { top: 1, skip: 0 },
         where: `{'${this.table.keyField.id}'.EX.'${id}'}`,
       },
     );
 
-    return res.data.data?.[0] ? this.extractFields(res.data.data[0]) : null;
+    return res.data.data?.[0]
+      ? this.extractFields(res.data.data[0], select)
+      : null;
   }
 
-  async getMany(data: GetManyRequest<DocumentFromTable<TableDef>>) {
-    const fieldIds = this.table.fields.map((field) => field.id);
+  async getMany<const Select extends SelectForTable<TableDef>>(
+    data: GetManyRequest<DocumentFromTable<TableDef>> & { select?: Select },
+  ) {
+    const qbSelect = this.createSelect(data.select);
 
     const res = await this.axios.post<QuickbaseQueryResponse<TableDef>>(
       "/records/query",
       {
         from: this.table.id,
-        select: fieldIds,
+        select: qbSelect,
         sortBy: [{ fieldId: this.table.keyField.id, order: "DESC" }],
         options: { top: data.limit, skip: (data.page - 1) * data.limit },
         ...(data.query ? { where: this.createWhere(data.query) } : {}),
       },
     );
 
-    return res.data.data.map((qbRecord) => this.extractFields(qbRecord));
+    return res.data.data.map((qbRecord) =>
+      this.extractFields(qbRecord, data.select),
+    );
   }
 
   async createOne(body: DocumentFromTable<TableDef>) {

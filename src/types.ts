@@ -113,6 +113,9 @@ export type DocumentFromTable<T extends { fields: Field[] }> = {
     : never]: FieldTypeMapping[K["type"]];
 };
 
+export type SelectForTable<T extends { fields: Field[] }> =
+  T["fields"][number]["key"][];
+
 export type QuickbaseField<T> = {
   value: T;
 };
