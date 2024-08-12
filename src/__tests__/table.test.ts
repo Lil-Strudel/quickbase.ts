@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { Table } from "../table";
 import axios from "axios";
 import { TableDefinition } from "../types";
@@ -12,6 +12,11 @@ describe("Table Class", async () => {
       "User-Agent": "Quickbase.ts Test Suite",
     },
   });
+
+  // myAxios.interceptors.request.use((config) => {
+  //   console.log(config.data);
+  //   return config;
+  // });
 
   const tableDef = {
     id: "budd82t8w",
@@ -47,12 +52,38 @@ describe("Table Class", async () => {
 
   it("should get one by id", async () => {
     const doc = await table.getOneById(testRecordId);
+
     expect(doc).toBeDefined();
+  });
+
+  it("should get one by id and select which fields show", async () => {
+    const doc = await table.getOneById(testRecordId, ["dateCreated"]);
+
+    expect(doc).toBeDefined();
+    if (!doc) return;
+
+    expectTypeOf(doc).toHaveProperty("name");
+    expectTypeOf(doc).not.toHaveProperty("email");
+  });
+
+  it("should error if invalid field passed to select", async () => {
+    expect(table.getOneById(testRecordId, ["notreal"])).rejects.toThrowError(
+      "Tried to select field that doesnt exist: notreal",
+    );
   });
 
   it("should get many", async () => {
     const docs = await table.getMany({ page: 1, limit: 10 });
     expect(docs).toBeDefined();
+  });
+
+  it("should get many and select which fields to show", async () => {
+    const docs = await table.getMany({ page: 1, limit: 10, select: ["name"] });
+
+    expect(docs).toBeDefined();
+
+    expectTypeOf(docs).items.toHaveProperty("name");
+    expectTypeOf(docs).items.not.toHaveProperty("email");
   });
 
   it("should update one", async () => {
@@ -66,7 +97,25 @@ describe("Table Class", async () => {
       op: "EX",
       value: "Test Name",
     });
+
     expect(res).toBeDefined();
+  });
+
+  it("should get one and select which fields to show", async () => {
+    const res = await table.getOne(
+      {
+        field: "name",
+        op: "EX",
+        value: "Test Name",
+      },
+      ["name"],
+    );
+
+    expect(res).toBeDefined();
+    if (!res) return;
+
+    expectTypeOf(res).toHaveProperty("name");
+    expectTypeOf(res).not.toHaveProperty("email");
   });
 
   it("should delete one", async () => {
