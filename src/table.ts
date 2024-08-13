@@ -243,6 +243,24 @@ export class Table<TableDef extends TableDefinition> {
     return true;
   }
 
+  async upsertMany(data: DocumentFromTable<TableDef>[]) {
+    const records = data.map((record) => this.buildQBData(record));
+    const res = await this.axios.post<QuickbaseInsertResponse<TableDef>>(
+      "/records",
+      {
+        to: this.table.id,
+        data: records,
+        fieldsToReturn: [],
+        mergeFieldId: this.table.keyField.id,
+      },
+    );
+    const updatedIds = res.data.metadata.updatedRecordIds;
+    const createdIds = res.data.metadata.createdRecordIds;
+    const unchangedIds = res.data.metadata.unchangedRecordIds;
+
+    return { updatedIds, createdIds, unchangedIds };
+  }
+
   async deleteOne(id: FieldTypeMapping[TableDef["keyField"]["type"]]) {
     const res = await this.axios.delete<{ numberDeleted: number }>("/records", {
       data: {
