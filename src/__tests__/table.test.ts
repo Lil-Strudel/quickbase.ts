@@ -41,6 +41,7 @@ describe("Table Class", async () => {
   const table = new Table(myAxios, tableDef);
 
   let testRecordId: number;
+  let testUpsertRecordId: number;
   it("should create one", async () => {
     const recordId = await table.createOne({
       name: "Test Name",
@@ -91,6 +92,16 @@ describe("Table Class", async () => {
     expect(res).toBeDefined();
   });
 
+  it("should create one and update one", async () => {
+    const res = await table.upsertMany([
+      { name: "Test Name", email: "test@yahoo.com" },
+      { id: testRecordId, email: "test@gmail.com" },
+    ]);
+    expect(res.createdIds.length).toBe(1);
+    expect(res.updatedIds.length).toBe(1);
+    testUpsertRecordId = res.createdIds[0];
+  });
+
   it("should get one", async () => {
     const res = await table.getOne({
       field: "name",
@@ -120,6 +131,11 @@ describe("Table Class", async () => {
 
   it("should delete one", async () => {
     const res = await table.deleteOne(testRecordId);
+    expect(res).toBeDefined();
+  });
+
+  it("should delete another one", async () => {
+    const res = await table.deleteOne(testUpsertRecordId);
     expect(res).toBeDefined();
   });
 
