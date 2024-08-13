@@ -1,6 +1,6 @@
 {
   "name": "quickbase.ts",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A small, lightweight, strongly typed wrapper around axios built for quickbase.",
   "scripts": {
     "build": "tsup",
@@ -37,22 +37,22 @@
     }
   },
   "devDependencies": {
-    "@eslint/js": "^9.7.0",
-    "@types/node": "^20.14.11",
-    "@vitest/coverage-istanbul": "^2.0.3",
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^22.2.0",
+    "@vitest/coverage-istanbul": "^2.0.5",
     "dotenv": "^16.4.5",
-    "eslint": "^9.7.0",
-    "globals": "^15.8.0",
+    "eslint": "^9.9.0",
+    "globals": "^15.9.0",
     "prettier": "^3.3.3",
-    "tsup": "^8.1.0",
-    "typescript": "^5.5.3",
-    "typescript-eslint": "^7.16.1",
-    "vitest": "^2.0.3"
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.1.0",
+    "vitest": "^2.0.5"
   },
   "dependencies": {
-    "axios": "^1.7.2"
+    "axios": "^1.7.3"
   },
   "overrides": {
-    "eslint": "^9.7.0"
+    "eslint": "^9.9.0"
   }
 }
