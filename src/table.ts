@@ -18,7 +18,7 @@ interface GetManyRequest<T> {
   query?: QueryBuilder<T>;
 }
 
-type FieldQuery<T> = {
+export type FieldQuery<T> = {
   [K in keyof T]: {
     field: K;
     op: QuickbaseOperators;
@@ -26,7 +26,7 @@ type FieldQuery<T> = {
   };
 }[keyof T];
 
-type QueryBuilder<T> =
+export type QueryBuilder<T> =
   | { AND: QueryBuilder<T>[] }
   | { OR: QueryBuilder<T>[] }
   | FieldQuery<T>;
