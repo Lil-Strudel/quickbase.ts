@@ -19,6 +19,25 @@ export interface Field {
   required?: boolean;
 }
 
+export interface GetManyRequest<T> {
+  page: number;
+  limit: number;
+  query?: QueryBuilder<T>;
+}
+
+export type FieldQuery<T> = {
+  [K in keyof T]: {
+    field: K;
+    op: QuickbaseOperators;
+    value: T[K];
+  };
+}[keyof T];
+
+export type QueryBuilder<T> =
+  | { AND: QueryBuilder<T>[] }
+  | { OR: QueryBuilder<T>[] }
+  | FieldQuery<T>;
+
 interface FileVersion {
   versionNumber: number;
   fileName: string;

@@ -5,31 +5,13 @@ import {
   FieldTypeMapping,
   QuickbaseField,
   QuickbaseInsertResponse,
-  QuickbaseOperators,
   QuickbaseQueryResponse,
   QuickbaseRecord,
   SelectForTable,
   TableDefinition,
+  GetManyRequest,
+  QueryBuilder,
 } from "./types";
-
-interface GetManyRequest<T> {
-  page: number;
-  limit: number;
-  query?: QueryBuilder<T>;
-}
-
-type FieldQuery<T> = {
-  [K in keyof T]: {
-    field: K;
-    op: QuickbaseOperators;
-    value: T[K];
-  };
-}[keyof T];
-
-type QueryBuilder<T> =
-  | { AND: QueryBuilder<T>[] }
-  | { OR: QueryBuilder<T>[] }
-  | FieldQuery<T>;
 
 export class Table<TableDef extends TableDefinition> {
   private fieldIds: number[];
