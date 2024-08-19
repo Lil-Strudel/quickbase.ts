@@ -1,8 +1,8 @@
 import { AxiosInstance } from "axios";
 import {
-  DocumentFromTable,
+  QueryDocumentFromTable,
   Field,
-  FieldTypeMapping,
+  FieldTypeMappingQuery,
   QuickbaseField,
   QuickbaseInsertResponse,
   QuickbaseQueryResponse,
@@ -11,6 +11,7 @@ import {
   TableDefinition,
   GetManyRequest,
   QueryBuilder,
+  UpsertDocumentFromTable,
 } from "./types";
 
 export class Table<TableDef extends TableDefinition> {
@@ -32,7 +33,7 @@ export class Table<TableDef extends TableDefinition> {
     }, {} as FieldKeyMap);
   }
 
-  createWhere(query: QueryBuilder<DocumentFromTable<TableDef>>): string {
+  createWhere(query: QueryBuilder<QueryDocumentFromTable<TableDef>>): string {
     if ("AND" in query) {
       const where = query.AND.map((subQuery) => this.createWhere(subQuery));
       return "(" + where.join("AND") + ")";
@@ -69,7 +70,7 @@ export class Table<TableDef extends TableDefinition> {
     record: QuickbaseRecord<TableDef>,
     select?: Select,
   ) {
-    type Document = Pick<DocumentFromTable<TableDef>, Select[number]>;
+    type Document = Pick<QueryDocumentFromTable<TableDef>, Select[number]>;
     const newItem = {} as Document;
 
     type FieldKeyMap = typeof this.fieldKeyMap;
@@ -99,7 +100,11 @@ export class Table<TableDef extends TableDefinition> {
     return newItem;
   }
 
-  private buildQBData(body: Partial<DocumentFromTable<TableDef>>) {
+  private buildQBData(
+    body: Partial<
+      QueryDocumentFromTable<TableDef> | UpsertDocumentFromTable<TableDef>
+    >,
+  ) {
     type FieldKeyMap = typeof this.fieldKeyMap;
     const data = Object.entries(body).reduce(
       (acc, [key, value]) => {
@@ -118,7 +123,7 @@ export class Table<TableDef extends TableDefinition> {
   }
 
   async getOne<const Select extends SelectForTable<TableDef>>(
-    query: QueryBuilder<DocumentFromTable<TableDef>>,
+    query: QueryBuilder<QueryDocumentFromTable<TableDef>>,
     select?: Select,
   ) {
     const qbSelect = this.createSelect(select);
@@ -140,7 +145,7 @@ export class Table<TableDef extends TableDefinition> {
   }
 
   async getOneById<const Select extends SelectForTable<TableDef>>(
-    id: FieldTypeMapping[TableDef["keyField"]["type"]],
+    id: FieldTypeMappingQuery[TableDef["keyField"]["type"]],
     select?: Select,
   ) {
     const qbSelect = this.createSelect(select);
@@ -160,7 +165,9 @@ export class Table<TableDef extends TableDefinition> {
   }
 
   async getMany<const Select extends SelectForTable<TableDef>>(
-    data: GetManyRequest<DocumentFromTable<TableDef>> & { select?: Select },
+    data: GetManyRequest<QueryDocumentFromTable<TableDef>> & {
+      select?: Select;
+    },
   ) {
     const qbSelect = this.createSelect(data.select);
 
@@ -180,7 +187,7 @@ export class Table<TableDef extends TableDefinition> {
     );
   }
 
-  async createOne(body: DocumentFromTable<TableDef>) {
+  async createOne(body: UpsertDocumentFromTable<TableDef>) {
     const data = this.buildQBData(body);
 
     const res = await this.axios.post<QuickbaseInsertResponse<TableDef>>(
@@ -199,8 +206,8 @@ export class Table<TableDef extends TableDefinition> {
   }
 
   async updateOne(
-    id: FieldTypeMapping[TableDef["keyField"]["type"]],
-    update: Partial<DocumentFromTable<TableDef>>,
+    id: FieldTypeMappingQuery[TableDef["keyField"]["type"]],
+    update: Partial<UpsertDocumentFromTable<TableDef>>,
   ) {
     const data = this.buildQBData(update);
 
@@ -225,7 +232,7 @@ export class Table<TableDef extends TableDefinition> {
     return true;
   }
 
-  async upsertMany(data: DocumentFromTable<TableDef>[]) {
+  async upsertMany(data: UpsertDocumentFromTable<TableDef>[]) {
     const records = data.map((record) => this.buildQBData(record));
     const res = await this.axios.post<QuickbaseInsertResponse<TableDef>>(
       "/records",
@@ -243,7 +250,7 @@ export class Table<TableDef extends TableDefinition> {
     return { updatedIds, createdIds, unchangedIds };
   }
 
-  async deleteOne(id: FieldTypeMapping[TableDef["keyField"]["type"]]) {
+  async deleteOne(id: FieldTypeMappingQuery[TableDef["keyField"]["type"]]) {
     const res = await this.axios.delete<{ numberDeleted: number }>("/records", {
       data: {
         from: this.table.id,
