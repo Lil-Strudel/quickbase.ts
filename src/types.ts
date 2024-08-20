@@ -7,14 +7,14 @@ export interface AppDefinition {
 export interface TableDefinition {
   id: string;
   accessor: string;
-  keyField: { id: number; type: keyof FieldTypeMapping };
+  keyField: { id: number; type: keyof FieldTypeMappingQuery };
   fields: Field[];
 }
 
 export interface Field {
   id: number;
   key: string;
-  type: keyof FieldTypeMapping;
+  type: keyof FieldTypeMappingQuery;
   label: string;
   required?: boolean;
 }
@@ -62,6 +62,10 @@ declare interface FileData {
   reservedBy: ReservedBy;
   versions: FileVersion[];
 }
+declare interface UploadFileData {
+  fileName: string;
+  data: string;
+}
 
 interface User {
   id: string;
@@ -76,7 +80,7 @@ interface ListUser {
   email: string;
 }
 
-export interface FieldTypeMapping {
+export interface FieldTypeMappingQuery {
   Text: string;
   "Rich-Text": string;
   "Multi-Line-Text": string;
@@ -102,6 +106,11 @@ export interface FieldTypeMapping {
   "Record ID": number;
 }
 
+export interface FieldTypeMappingUpsert
+  extends Omit<FieldTypeMappingQuery, "File Attachment"> {
+  "File Attachment": UploadFileData;
+}
+
 export type QuickbaseOperators =
   | "CT"
   | "XCT"
@@ -124,12 +133,20 @@ export type QuickbaseOperators =
   | "GT"
   | "GTE";
 
-export type DocumentFromTable<T extends { fields: Field[] }> = {
-  [K in T["fields"][number] as K["key"]]?: FieldTypeMapping[K["type"]];
+export type QueryDocumentFromTable<T extends { fields: Field[] }> = {
+  [K in T["fields"][number] as K["key"]]?: FieldTypeMappingQuery[K["type"]];
 } & {
   [K in T["fields"][number] as K["required"] extends true
     ? K["key"]
-    : never]: FieldTypeMapping[K["type"]];
+    : never]: FieldTypeMappingQuery[K["type"]];
+};
+
+export type UpsertDocumentFromTable<T extends { fields: Field[] }> = {
+  [K in T["fields"][number] as K["key"]]?: FieldTypeMappingUpsert[K["type"]];
+} & {
+  [K in T["fields"][number] as K["required"] extends true
+    ? K["key"]
+    : never]: FieldTypeMappingUpsert[K["type"]];
 };
 
 export type SelectForTable<T extends { fields: Field[] }> =
@@ -141,7 +158,7 @@ export type QuickbaseField<T> = {
 
 export type QuickbaseRecord<T extends { fields: Field[] }> = {
   [K in T["fields"][number] as K["id"]]: QuickbaseField<
-    FieldTypeMapping[K["type"]]
+    FieldTypeMappingQuery[K["type"]]
   >;
 };
 

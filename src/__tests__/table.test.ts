@@ -35,6 +35,7 @@ describe("Table Class", async () => {
       { id: 9, key: "date", type: "DateTime", label: "Date", required: false },
       { id: 10, key: "favoriteNumber", type: "Numeric", label: "Favorite Number", required: false, },
       { id: 11, key: "favoriteCheckbox", type: "Checkbox", label: "Favorite Checkbox", required: false, },
+      { id: 12, key: "file", type: "File Attachment", label: "File", required: false, },
     ],
   } as const satisfies TableDefinition;
 
