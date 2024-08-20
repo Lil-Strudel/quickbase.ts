@@ -100,11 +100,7 @@ export class Table<TableDef extends TableDefinition> {
     return newItem;
   }
 
-  private buildQBData(
-    body: Partial<
-      QueryDocumentFromTable<TableDef> | UpsertDocumentFromTable<TableDef>
-    >,
-  ) {
+  private buildQBData(body: Partial<UpsertDocumentFromTable<TableDef>>) {
     type FieldKeyMap = typeof this.fieldKeyMap;
     const data = Object.entries(body).reduce(
       (acc, [key, value]) => {
