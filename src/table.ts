@@ -13,6 +13,7 @@ import {
   QueryBuilder,
   UpsertDocumentFromTable,
 } from "./types";
+import { checkForQBErrors } from "./errors";
 
 export class Table<TableDef extends TableDefinition> {
   private fieldIds: number[];
@@ -254,7 +255,8 @@ export class Table<TableDef extends TableDefinition> {
       },
     });
 
-    if (res.data.numberDeleted === 0) throw new Error("Record not found");
+    if (res.data.numberDeleted === 0)
+      throw new Error(`Record with ID ${id} not found`);
 
     return true;
   }
