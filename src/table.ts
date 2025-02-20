@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios";
+import { AxiosInstance, AxiosResponse } from "axios";
 import {
   QueryDocumentFromTable,
   Field,
@@ -13,7 +13,6 @@ import {
   QueryBuilder,
   UpsertDocumentFromTable,
 } from "./types";
-import { checkForQBErrors } from "./errors";
 
 export class Table<TableDef extends TableDefinition> {
   private fieldIds: number[];
@@ -196,6 +195,8 @@ export class Table<TableDef extends TableDefinition> {
       },
     );
 
+    this.checkForLineErrors(res);
+
     const createdId = res.data.metadata.createdRecordIds[0];
     if (!createdId && createdId !== 0) throw new Error("Record not created");
 
@@ -219,6 +220,8 @@ export class Table<TableDef extends TableDefinition> {
         mergeFieldId: this.table.keyField.id,
       },
     );
+
+    this.checkForLineErrors(res);
 
     const updatedId =
       res.data.metadata.updatedRecordIds[0] ||
@@ -244,6 +247,8 @@ export class Table<TableDef extends TableDefinition> {
     const createdIds = res.data.metadata.createdRecordIds;
     const unchangedIds = res.data.metadata.unchangedRecordIds;
 
+    this.checkForLineErrors(res);
+
     return { updatedIds, createdIds, unchangedIds };
   }
 
@@ -259,5 +264,44 @@ export class Table<TableDef extends TableDefinition> {
       throw new Error(`Record with ID ${id} not found`);
 
     return true;
+  }
+
+  private checkForLineErrors(res: AxiosResponse) {
+    const insideQuoteRegex = /"([^"]*)"/g;
+    const lineErrors = res.data.metadata.lineErrors;
+    if (!lineErrors) return;
+    const formattedErrors = Object.values(lineErrors).reduce<string[]>(
+      (acc, cur) => {
+        for (const error of cur as unknown as string[]) {
+          acc.push(
+            error.replace(insideQuoteRegex, (_, p1) => {
+              const relatedField = this.table.fields.find(
+                (field) => field.id == Number(p1),
+              );
+              return `\"${relatedField?.key ?? p1}\"`;
+            }),
+          );
+        }
+        return acc;
+      },
+      [],
+    );
+    const {
+      createdRecordIds,
+      totalNumberOfRecordsProcessed,
+      unchangedRecordIds,
+      updatedRecordIds,
+    } = res.data.metadata;
+    const totalValid =
+      createdRecordIds.length +
+      unchangedRecordIds.length +
+      updatedRecordIds.length;
+    const failedCount = totalNumberOfRecordsProcessed - totalValid;
+
+    if (formattedErrors.length > 0)
+      throw new Error(
+        `Failed to action ${failedCount} record(s) with the following line error(s):\n` +
+          formattedErrors.join("\n"),
+      );
   }
 }

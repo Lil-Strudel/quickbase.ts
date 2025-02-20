@@ -175,14 +175,19 @@ describe("Table Class", async () => {
     }).rejects.toThrowError("Record with ID 56 not found");
   });
 
-  it.only("should throw error when trying to create invalid record", async () => {
+  it("should throw error when trying to create invalid record", async () => {
     expect(async () => {
-      await table.createOne({});
-    }).rejects.toThrowError("Record with ID 56 not found");
+      const res = await table.createOne({
+        date: "timbooku",
+      });
+      console.log(res);
+    }).rejects.toThrowError();
   });
 
-  it("should throw error when invalid data is passed through", async () => {
-    const res = await table.updateOne("Helo", { id: "Hello World" });
-    console.log(res);
+  it("should throw error when trying to update with invalid record", async () => {
+    expect(async () => {
+      const res = await table.upsertMany([{ id: "Hello World" }]);
+      console.log(res);
+    }).rejects.toThrowError();
   });
 });
